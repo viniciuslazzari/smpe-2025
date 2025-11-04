@@ -1,0 +1,212 @@
+---
+title: "Lecture 2"
+output: html_document
+date: "2025-10-02"
+---
+
+# Issues with original plots:
+
+-   steps for sizes are poorly distributed, making it unclear what happens in between.
+
+-   Plot captions are bad (titles, legend etc).
+
+-   Axis labels are bad (overlapping etc)
+
+-   Line fitting is not helpful (weird segmented line)
+
+
+# Load required R libraries
+
+```{r}
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(nlstools)
+library(purrr)
+library(broom)
+```
+
+# Read the dataset from CSV and inspect the first few rows
+```{r}
+data <- read.csv("measurments.csv")
+head(data)
+```
+# Display a summary of all variables in the dataset
+```{r}
+summary(data)
+```
+# Convert to long format -> column = on variable (Size, Method, Time), row = one observation
+```{r}
+
+data_long <- pivot_longer(data, cols = c("Seq", "Par", "Libc"),
+                          names_to = "Method", values_to = "Time")
+
+head(data_long)
+
+```
+
+# Plot raw data using linear scale
+```{r}
+
+ggplot(data_long, aes(x = Size, y = Time, color = Method)) +
+  geom_point(size = 1) +
+  labs(
+    title = "Performance by Method",
+    x = "Size",
+    y = "Time (seconds)"
+  ) +
+  scale_x_continuous(breaks = c(1, 10, 100, 1000, 10000, 95000, 100000, 1000000)) + 
+  theme_minimal() 
+```
+# Not readable with linear scale, logarithmic needed
+
+```{r}
+ggplot(data_long, aes(x = factor(Size), y = Time, color = Method)) +
+  geom_point(size = 1) +
+  scale_color_discrete(
+    name = "Algorithm",           
+    labels = c("Sequential", "Parallel", "Libc")  
+  ) +  
+  labs(
+    title = "Performance by Method",
+    x = "Size",
+    y = "Time (seconds)"
+  ) +
+  scale_x_discrete(breaks = c(1, 10, 100, 1000, 10000, 95000, 100000, 1000000)) + 
+  theme_minimal() 
+```
+# Sequential and libc implementation we have similar times, for larger data algorithms becomes way slower with bigger sizes, parallel scales nicely :D
+
+```{r}
+ggplot(data_long, aes(x = factor(Size), y = Time, color = Method)) +
+  stat_summary(fun = mean, geom = "point", size = 1) +          
+  stat_summary(fun.data = mean_sdl, geom = "errorbar", width = 0.2) + 
+  scale_color_discrete(
+    name = "Algorithm",           
+    labels = c("Sequential", "Parallel", "Libc")  
+  ) +  
+  labs(
+    title = "Performance by Method (Mean ± SD)",
+    x = "Size",
+    y = "Time (seconds)"
+  ) +
+
+  scale_x_discrete(breaks = c(1, 10, 100, 1000, 10000, 95000, 100000, 1000000)) + 
+  theme_minimal()
+```
+
+# Inspect data and filter the data to void noise points
+```{r}
+data_long
+
+colnames(data_long)
+
+data_filtered <- data_long %>%
+  filter(Size <= 95000)
+
+data_filtered 
+```
+# Plot mean ± Standard Deviation (SD) for the filter nada
+
+```{r}
+ggplot(data_filtered, aes(x = factor(Size), y = Time, color = Method)) +
+  stat_summary(fun = mean, geom = "point", size = 1) +          
+  stat_summary(fun.data = mean_sdl, geom = "errorbar", width = 0.2) + 
+  scale_color_discrete(
+    name = "Algorithm",           
+    labels = c("Sequential", "Parallel", "Libc")  
+  ) +  
+  labs(
+    title = "Performance by Method (Mean ± SD)",
+    x = "Size",
+    y = "Time (seconds)"
+  ) +
+  scale_x_discrete(breaks = c(1, 10, 100, 1000, 10000, 95000)) + 
+  theme_minimal()
+```
+# Calculate mean and standard deviation of Time for each Size and Method
+```{r}
+data_mean <- data_long %>%
+  group_by(Size, Method) %>%
+  summarise(
+    MeanTime = mean(Time),
+    SDTime = sd(Time),
+    .groups = "drop"
+  )
+```
+
+# Fit a theoretical model MeanTime = a * Size * log(Size) for each method (complexity ~ n log n)
+
+
+```{r}
+fits <- data_mean %>%
+  group_by(Method) %>%
+  nest() %>%
+  mutate(
+    fit = map(data, ~ nls(MeanTime ~ a * Size * log(Size),
+                          data = .x,
+                          start = list(a = 1e-7))),
+    tidied = map(fit, broom::tidy)
+  ) %>%
+  unnest(tidied)
+```
+
+# Generate fitted (predicted) values from each model for visualization
+
+```{r}
+data_fit <- fits %>%
+  rowwise() %>%
+  do({
+    method_name <- .$Method
+    fit_model <- .$fit
+    df <- data_mean %>% filter(Method == method_name)
+    df$Fitted <- predict(fit_model, newdata = df)
+    df
+  })
+```
+
+# Plot measured mean times and fitted curves using logarithmic X scale
+
+```{r}
+ggplot(data_mean, aes(x = Size, y = MeanTime, color = Method)) +
+  geom_point(linewidth = 1) +
+  geom_line(data = data_fit, aes(x = Size, y = Fitted, color = Method), size = 1) +
+  scale_color_discrete(
+    name = "Algorithm",
+    labels = c("Sequential", "Parallel", "Libc")
+  ) +
+  scale_x_log10(
+    breaks = c(1, 10, 100, 1000, 10000, 95000),  
+    labels = scales::comma
+  ) +
+  labs(
+    title = "Performance vs Size with n*log(n) Fit",
+    x = "Size (log scale)",
+    y = "Mean Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+# Faceted version: compare scalability of each algorithm separately with same log scale
+
+```{r}
+ggplot(data_mean, aes(x = Size, y = MeanTime, color = Method)) +
+  geom_point(linewidth = 1) +
+  geom_line(data = data_fit, aes(x = Size, y = Fitted, color = Method), size = 1) +
+  scale_color_discrete(
+    name = "Algorithm",
+    labels = c("Sequential", "Parallel", "Libc")
+  ) +
+  facet_wrap(~Method)+
+ scale_x_log10(labels = scales::comma) +
+  labs(
+    title = "Scalability by Algorithm",
+    x = "Input size (log scale)",
+    y = "Execution Time (s)",
+    color = "Algorithm"
+  ) +
+  theme_bw(base_size = 10)
+```
+# In this experiment, using a maximum input size of 1,000,000, the Parallel algorithm demonstrates better scalability compared to both Libc and the Sequential algorithm. However, when fitting the Parallel algorithm to a logarithmic model at this input size, the results suggest that it does not align completely with an 𝑛log(𝑛) behavior. To accurately predict how the Parallel algorithm scales for larger input sizes, we suggest performing additional measurements in order to identify a more suitable model that better represents its scalability.
