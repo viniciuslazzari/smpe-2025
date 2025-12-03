@@ -7,22 +7,22 @@ This repository is a collection of studies and notes of the [Scientific Methodol
 The project is organized as follows:
 
 ```
-SMPE/
-├── notes/               # Lecture summaries and course notes
-│   ├── Lecture1.md      # R Crash Course
-│   ├── Lecture3.md      # Data Visualization Best Practices
-│   └── Lecture4.md      # Additional lecture notes
-├── mooc/                # MOOC course materials
-│   ├── module1/         # Module 1 materials
-│   └── module2/         # Module 2 materials (Challenger analysis)
-├── projects/            # Code projects and experiments
-│   └── quicksort/       # Parallel quicksort implementation and performance analysis
-│       ├── src/         # Source code (C implementation)
-│       ├── scripts/     # Benchmarking and data extraction scripts
-│       ├── data/        # Experimental measurement data
-│       └── analysis.rmd # R Markdown analysis report
-├── .gitignore           # Git ignore patterns
-└── README.md            # Project documentation
+smpe/
+├── .gitignore
+├── README.md
+├── mooc/
+│   ├── module1/
+│   │   └── readme.md
+│   └── module2/
+│       ├── challenger.ipynb
+│       └── shuttle.csv
+├── notes/
+│   ├── Lecture1.md
+│   ├── Lecture3.md
+│   └── Lecture4.md
+└── projects/
+	├── good_graphics
+	└── quicksort
 ```
 
 ## Contents
