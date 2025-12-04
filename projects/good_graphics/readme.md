@@ -96,6 +96,10 @@ this element could be removed and the plot would be completely understandable (b
 
 The worst error of this plot, it's vertical axis is inverted. This was done for aesthetical reasons but it makes very hard to understand in which direction we have more or less deaths, since it's not natural to the reader.
 
+#### Fixing proposal
+
+![Gun deaths in Florida fixed plot](images/gun_deaths_fixed.png)
+
 ### Daily new confirmed COVID-19 cases per million people
 
 ![Daily new confirmed COVID-19 cases per million people](images/covid_cases.png)
@@ -113,7 +117,7 @@ There is no confidence interval in the plot.
 
 There could be a vertical grid. The choice of colors are very similar, even on a laptop screen the purple and red can be confused with each other.
 
-### 3. Annotations (Labels, Legends, and Axes)
+#### 3. Annotations (Labels, Legends, and Axes)
 
 Covers all text, legends, and labeling elements on the graphic.
 
@@ -131,6 +135,10 @@ Criteria for maximizing the density and relevance of the data presented.
 - Curves are on the same scale.
 
 They are not, the vertical distance between 100 and 200 is much smaller than the difference between 30 and 100 for instance.
+
+#### Fixing proposal
+
+![Daily new confirmed COVID-19 cases per million people fixing proposal](images/covid_cases_fixed.png)
 
 ### Temperature cooling scheme
 
@@ -170,3 +178,9 @@ Ensures the graphic is well-integrated and explained within a document or presen
 - The title is sufficiently self contained to partially understand the graphic.
 
 The title could contain more information about the units and the plot itself, it looks to simple for the plot presented and it's missing information.
+
+#### Fixing proposal
+
+![Temperature cooling scheme fixing proposal](images/cooling_scheme_fixed.png)
+
+In this plot I'm using the color green for an `alpha = 60` which is not recommended, it can be changed by any other color for better video display.
