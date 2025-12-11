@@ -10,7 +10,6 @@
   Pthreads).
 */
 
-
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,21 +17,25 @@
 #include <sys/time.h>
 #include <string.h>
 #include <sys/resource.h>
+#include <x86intrin.h>
+#include <emmintrin.h>
 
 #define DNUM 1000000
 #define THREAD_LEVEL 10
 
 long long measure_cpu_freq() {
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
+    struct timespec start_ts, end_ts;
+    clock_gettime(CLOCK_MONOTONIC, &start_ts);
+    unsigned long long start_cycles = __rdtsc();
     volatile unsigned long long sum = 0;
-    for (volatile unsigned long long i = 0; i < 100000000; i++) {
+    for (volatile unsigned long long i = 0; i < 100000000ULL; i++) {
         sum += 1;
     }
-    gettimeofday(&end, NULL);
-    double time = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
-    unsigned long long operations = 100000000;
-    long long freq = (long long)(operations / time);
+    unsigned long long end_cycles = __rdtsc();
+    clock_gettime(CLOCK_MONOTONIC, &end_ts);
+    double time = (end_ts.tv_sec - start_ts.tv_sec) + (end_ts.tv_nsec - start_ts.tv_nsec) / 1e9;
+    unsigned long long cycles = end_cycles - start_cycles;
+    long long freq = (long long)(cycles / time);
     return freq;
 }
 

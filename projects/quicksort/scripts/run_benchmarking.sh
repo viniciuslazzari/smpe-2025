@@ -36,7 +36,7 @@ done
 for size in "${shuffled_runs[@]}"; do
     for type in seq par built; do
         if [ "$type" = "par" ]; then
-            for threads in 2 4 8; do
+            for threads in $(seq 2 128); do
                 output=$( { time ./src/parallelQuicksort "$size" "$type" "$threads"; } 2>&1 )
                 time=$(echo "$output" | grep "Parallel" | sed 's/.*took: \([0-9.]*\) sec\./\1/')
                 freq_before=$(echo "$output" | grep "Freq before:" | sed 's/.*: \([0-9]*\) Hz/\1/')
@@ -48,7 +48,7 @@ for size in "${shuffled_runs[@]}"; do
                 if [[ -z "$time" || "$time" == "0" ]]; then
                     continue
                 fi
-                echo "$size,$type,$time,$freq_before_ghz,$freq_after_ghz,$threads,$peak_memory" >> "$OUTPUT_FILE"
+                echo "$size,$type,$time,$freq_before,$freq_after,$threads,$peak_memory" >> "$OUTPUT_FILE"
             done
         else
             output=$( { time ./src/parallelQuicksort "$size" "$type"; } 2>&1 )
