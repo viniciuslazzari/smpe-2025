@@ -17,9 +17,24 @@
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
+#include <sys/resource.h>
 
 #define DNUM 1000000
 #define THREAD_LEVEL 10
+
+long long measure_cpu_freq() {
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    volatile unsigned long long sum = 0;
+    for (volatile unsigned long long i = 0; i < 100000000; i++) {
+        sum += 1;
+    }
+    gettimeofday(&end, NULL);
+    double time = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
+    unsigned long long operations = 100000000;
+    long long freq = (long long)(operations / time);
+    return freq;
+}
 
 //for sequential and parallel implementation
 void swap(double lyst[], int i, int j);
@@ -53,14 +68,26 @@ Main method:
 int main(int argc, char *argv[])
 {
   struct timeval start, end;
+  struct rusage usage;
   double diff;
 
-  srand(time(NULL));            //seed random
+  srand(42);            //seed random for reproducible lists
+
+  long long measured_freq = measure_cpu_freq();
+  printf("Measured CPU freq: %lld Hz\n", measured_freq);
 
   int NUM = DNUM;
-  if (argc == 2)                //user specified list size.
+  if (argc >= 2)                //user specified list size.
   {
     NUM = atoi(argv[1]);
+  }
+  char *type = "all";
+  if (argc >= 3) {
+    type = argv[2];
+  }
+  int threads = THREAD_LEVEL;
+  if (argc >= 4) {
+    threads = atoi(argv[3]);
   }
   //Want to compare sorting on the same list,
   //so backup.
@@ -75,54 +102,83 @@ int main(int argc, char *argv[])
   //copy list.
   memcpy(lyst, lystbck, NUM * sizeof(double));
 
+  if (strcmp(type, "all") == 0 || strcmp(type, "seq") == 0) {
+    long long freq_before = measure_cpu_freq();
+    printf("Freq before: %lld Hz\n", freq_before);
 
-  //Sequential mergesort, and timing.
-  gettimeofday(&start, NULL);
-  quicksort(lyst, NUM);
-  gettimeofday(&end, NULL);
+    //Sequential quicksort, and timing.
+    gettimeofday(&start, NULL);
+    quicksort(lyst, NUM);
+    gettimeofday(&end, NULL);
 
-  if (!isSorted(lyst, NUM)) {
-    printf("Oops, lyst did not get sorted by quicksort.\n");
+    if (!isSorted(lyst, NUM)) {
+      printf("Oops, lyst did not get sorted by quicksort.\n");
+    }
+    //Compute time difference.
+    diff = ((end.tv_sec * 1000000 + end.tv_usec)
+            - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
+    printf("Sequential quicksort took: %lf sec.\n", diff);
+
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Peak memory: %.2f MB\n", usage.ru_maxrss / (1024.0 * 1024.0));
+
+    long long freq_after = measure_cpu_freq();
+    printf("Freq after: %lld Hz\n", freq_after);
   }
-  //Compute time difference.
-  diff = ((end.tv_sec * 1000000 + end.tv_usec)
-          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
-  printf("Sequential quicksort took: %lf sec.\n", diff);
-
-
 
   //Now, parallel quicksort.
 
   //copy list.
   memcpy(lyst, lystbck, NUM * sizeof(double));
 
-  gettimeofday(&start, NULL);
-  parallelQuicksort(lyst, NUM, THREAD_LEVEL);
-  gettimeofday(&end, NULL);
+  if (strcmp(type, "all") == 0 || strcmp(type, "par") == 0) {
+    long long freq_before = measure_cpu_freq();
+    printf("Freq before: %lld Hz\n", freq_before);
 
-  if (!isSorted(lyst, NUM)) {
-    printf("Oops, lyst did not get sorted by parallelQuicksort.\n");
+    gettimeofday(&start, NULL);
+    parallelQuicksort(lyst, NUM, threads);
+    gettimeofday(&end, NULL);
+
+    if (!isSorted(lyst, NUM)) {
+      printf("Oops, lyst did not get sorted by parallelQuicksort.\n");
+    }
+    //Compute time difference.
+    diff = ((end.tv_sec * 1000000 + end.tv_usec)
+            - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
+    printf("Parallel quicksort took: %lf sec.\n", diff);
+
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Peak memory: %.2f MB\n", usage.ru_maxrss / (1024.0 * 1024.0));
+
+    long long freq_after = measure_cpu_freq();
+    printf("Freq after: %lld Hz\n", freq_after);
   }
-  //Compute time difference.
-  diff = ((end.tv_sec * 1000000 + end.tv_usec)
-          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
-  printf("Parallel quicksort took: %lf sec.\n", diff);
-
-
 
   //Finally, built-in for reference:
   memcpy(lyst, lystbck, NUM * sizeof(double));
-  gettimeofday(&start, NULL);
-  qsort(lyst, NUM, sizeof(double), compare_doubles);
-  gettimeofday(&end, NULL);
 
-  if (!isSorted(lyst, NUM)) {
-    printf("Oops, lyst did not get sorted by qsort.\n");
+  if (strcmp(type, "all") == 0 || strcmp(type, "built") == 0) {
+    long long freq_before = measure_cpu_freq();
+    printf("Freq before: %lld Hz\n", freq_before);
+
+    gettimeofday(&start, NULL);
+    qsort(lyst, NUM, sizeof(double), compare_doubles);
+    gettimeofday(&end, NULL);
+
+    if (!isSorted(lyst, NUM)) {
+      printf("Oops, lyst did not get sorted by qsort.\n");
+    }
+    //Compute time difference.
+    diff = ((end.tv_sec * 1000000 + end.tv_usec)
+            - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
+    printf("Built-in quicksort took: %lf sec.\n", diff);
+
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Peak memory: %.2f MB\n", usage.ru_maxrss / (1024.0 * 1024.0));
+
+    long long freq_after = measure_cpu_freq();
+    printf("Freq after: %lld Hz\n", freq_after);
   }
-  //Compute time difference.
-  diff = ((end.tv_sec * 1000000 + end.tv_usec)
-          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0;
-  printf("Built-in quicksort took: %lf sec.\n", diff);
 
   free(lyst);
   free(lystbck);
