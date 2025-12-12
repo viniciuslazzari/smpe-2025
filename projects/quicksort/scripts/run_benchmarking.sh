@@ -19,7 +19,7 @@ sizes+=($(seq 100000 50000 1000000))
 # Create list of all runs (each size repeated 10 times)
 all_runs=()
 for size in "${sizes[@]}"; do
-    for rep in $(seq 1 30); do
+    for rep in $(seq 1 5); do
         all_runs+=("$size")
     done
 done
@@ -70,7 +70,7 @@ for size in "${shuffled_runs[@]}"; do
             if [[ -z "$time" || "$time" == "0" ]]; then
                 continue
             fi
-            echo "$size,$type,$time,$freq_before_ghz,$freq_after_ghz,$threads,$peak_memory" >> "$OUTPUT_FILE"
+            echo "$size,$type,$time,$freq_before,$freq_after,$threads,$peak_memory" >> "$OUTPUT_FILE"
         fi
     done
 done

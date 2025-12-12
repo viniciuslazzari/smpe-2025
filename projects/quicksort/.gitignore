@@ -36,3 +36,5 @@ journal.tex
 *.hex
 src/parallelQuicksort
 .Rproj.user
+
+.venv
