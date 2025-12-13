@@ -22,7 +22,8 @@ smpe/
 │   └── Lecture4.md
 └── projects/
 	├── good_graphics
-	└── quicksort
+	├── quicksort
+	└── network_latency
 ```
 
 ## Contents
